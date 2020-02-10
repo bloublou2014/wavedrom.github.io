@@ -717,12 +717,11 @@ const _ = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
 const genBrick = __webpack_require__(/*! ./gen-brick */ "./lib/gen-brick.js");
 // region letters to svg's ids
 
-// Clocks : letter provides a full length
-const clocks = {p: 'pclk', n: 'nclk', P: 'Pclk', N: 'Nclk', h: 'pclk', l: 'nclk', H: 'Pclk', L: 'Nclk'};
 
-const x2 = {
+const nextBrick = {
     'a': 'a',
     'b': 'b',
+    'c': 'c',
     '0': '0', '1': '1',
     'x': 'x',
     'd': 'd',
@@ -731,10 +730,11 @@ const x2 = {
     '=': 'v', '2': 'v', '3': 'v', '4': 'v', '5': 'v', '6': 'v', '7': 'v', '8': 'v', '9': 'v'
 };
 
-const x3 = {
+const additionalBricks = {
     '0': '', '1': '',
     'a': '',
     'b': '',
+    'c': '',
     'x': '',
     'd': '',
     'u': '',
@@ -742,7 +742,7 @@ const x3 = {
     '=': '-2', '2': '-2', '3': '-3', '4': '-4', '5': '-5', '6': '-6', '7': '-7', '8': '-8', '9': '-9'
 };
 
-const y1 = {
+const previousBrick = {
     'p': '0', 'n': '1',
     'P': '0', 'N': '1',
     'h': '1', 'l': '0',
@@ -754,6 +754,7 @@ const y1 = {
     'z': 'z',
     'a': 'a',
     'b': 'b',
+    'c': 'c',
     '=': 'v', '2': 'v', '3': 'v', '4': 'v', '5': 'v', '6': 'v', '7': 'v', '8': 'v', '9': 'v'
 };
 
@@ -769,13 +770,24 @@ const y2 = {
     'z': '',
     'a': '',
     'b': '',
+    'c': '',
     '=': '-2', '2': '-2', '3': '-3', '4': '-4', '5': '-5', '6': '-6', '7': '-7', '8': '-8', '9': '-9'
 };
 
+const reversed1Bricks = {
+    '1mb': 'bm0',
+    '1ma': 'am0',
+    '1mc': 'cm0',
+    'am1': '111',
+    'bm1': '111',
+    'cm1': '111'
+};
+
 // second part of the 40 pixel
-const x4 = {
+const complementaryBricks = {
     'a': '111',
     'b': '111',
+    'c': '111',
     'p': '111',
     'n': '000',
     'P': '111',
@@ -801,19 +813,61 @@ const x4 = {
     '9': 'vvv-9'
 };
 
-const x5 = {
-    p: 'nclk', n: 'pclk', P: 'nclk', N: 'pclk'
-};
+// region Clocks
+// Clocks : letter provides a full length
+const clocks = {p: 'pclk', n: 'nclk', P: 'Pclk', N: 'Nclk', h: 'pclk', l: 'nclk', H: 'Pclk', L: 'Nclk'};
 
-const x6 = {
-    p: '000', n: '111', P: '000', N: '111'
-};
+const x5Clocks = {p: 'nclk', n: 'pclk', P: 'nclk', N: 'pclk'};
 
-const xclude = {
-    'hp': '111', 'Hp': '111', 'ln': '000', 'Ln': '000', 'nh': '111', 'Nh': '111', 'pl': '000', 'Pl': '000'
-};
+const x6Clocks = {p: '000', n: '111', P: '000', N: '111'};
+
+const clockReplacement = {'hp': '111', 'Hp': '111', 'ln': '000', 'Ln': '000', 'nh': '111', 'Nh': '111', 'pl': '000', 'Pl': '000'};
+// endregion
 
 // endregion
+
+function genClockBrick(text, extra, times) {
+    let clock = clocks[text[1]];
+    if (!clock) {
+        return;
+    }
+    const from = text[1];
+    const tmp1 = clockReplacement[text] || clocks[from];
+    const tmp0 = complementaryBricks[from];
+    // sharp curves
+    const tmp2 = x5Clocks[from];
+    const bricks = tmp2
+        ? [tmp1, tmp0] // hlHL
+        : [tmp1, tmp0, tmp2, x6Clocks[from]]; // pnPN
+    return genBrick(bricks, extra, times);
+}
+
+function genCommonBrick(text, extra, times) {
+    let tmp0, tmp2, tmp3;
+    let elt = text[1];
+    const previous = text[0];
+
+    tmp0 = complementaryBricks[elt];
+    console.log('gen elt', elt, text, tmp0);
+    tmp2 = nextBrick[elt];
+    tmp3 = previousBrick[previous];
+    if (tmp2 === undefined || tmp3 === undefined) {
+        // unknown
+        return genBrick(['xxx'], extra, times);
+    }
+    // soft curves
+    let brick = tmp3 + 'm' + tmp2;
+    let reversedBrick = reversed1Bricks[brick];
+    if (reversedBrick) {
+        brick = reversedBrick;
+        elt = reversedBrick[2];
+        tmp0 = complementaryBricks[elt];
+    }
+    const curve = [brick + y2[previous] + additionalBricks[elt], tmp0];
+    console.log('gen curve', curve);
+    return genBrick(curve, extra, times);
+}
+
 
 /**
  *
@@ -823,39 +877,7 @@ const xclude = {
  * @returns {*}
  */
 function genWaveBrick(text, extra, times) {
-    let atext, tmp0, tmp2, tmp3, tmp4;
-    atext = text.split('');
-    //if (atext.length !== 2) { return genBrick(['xxx'], extra, times); }
-    const elt = atext[1];
-    tmp0 = x4[elt];
-    let tmp1 = clocks[elt];
-    if (!tmp1) {
-        tmp2 = x2[elt];
-        if (tmp2 === undefined) {
-            // unknown
-            return genBrick(['xxx'], extra, times);
-        }
-        tmp3 = y1[atext[0]];
-        if (tmp3 === undefined) {
-            // unknown
-            return genBrick(['xxx'], extra, times);
-        }
-        // soft curves
-        const curve = [tmp3 + 'm' + tmp2 + y2[atext[0]] + x3[elt], tmp0];
-        return genBrick(curve, extra, times);
-    }
-    tmp4 = xclude[text];
-    if (tmp4 !== undefined) {
-        tmp1 = tmp4;
-    }
-    // sharp curves
-    tmp2 = x5[elt];
-    if (tmp2 === undefined) {
-        // hlHL
-        return genBrick([tmp1, tmp0], extra, times);
-    }
-    // pnPN
-    return genBrick([tmp1, tmp0, tmp2, x6[elt]], extra, times);
+    return genClockBrick(text, extra, times) || genCommonBrick(text, extra, times);
 }
 
 module.exports = genWaveBrick;
@@ -20430,6 +20452,7 @@ const defaultSkin = {
         '0m1': {type:'g',svg:[['path',{d:'M0,20 3,20 9,0 20,0',class:'s0'}]]},
         '0ma': {type:'g',svg:[['path',{d:'M 0,20 H 10 L 16,0 h 4',class:'s16'}]]},
         '0mb': {type:'g',svg:[['path',{d:'M 0,20 H 2 V 0 h 8 v 20 h 3 V 0 h 6 v 20 h 4 V 0 h 17',class:'s16'}]]},
+        '0mc': {type:'g',svg:[['path',{d:'M 0,20 V 0 L 20,0',class:'s16'}]]},
         '0md': {type:'g',svg:[['path',{d:'m8,20 10,0',class:'s2'}],['path',{d:'m0,20 5,0',class:'s0'}]]},
         '0mu': {type:'g',svg:[['path',{d:'m0,20 3,0 C 7,10 10.107603,0 20,0',class:'s0'}]]},
         '0mv-2': {type:'g',svg:[['path',{d:'M9,0 20,0 20,20 3,20 z',class:'s6'}],['path',{d:'M3,20 9,0 20,0',class:'s0'}],['path',{d:'m0,20 20,0',class:'s0'}]]},
@@ -20464,6 +20487,7 @@ const defaultSkin = {
         'arrowhead': {type:'marker',style:'fill:#0041c4',markerHeight:'7',markerWidth:'10',markerUnits:'strokeWidth',viewBox:'0 -4 11 8',refX:'15',refY:'0',orient:'auto',svg:[['path',{d:'M0 -4 11 0 0 4z'}]]},
         'arrowtail': {type:'marker',style:'fill:#0041c4',markerHeight:'7',markerWidth:'10',markerUnits:'strokeWidth',viewBox:'-11 -4 11 8',refX:'-15',refY:'0',orient:'auto',svg:[['path',{d:'M0 -4 -11 0 0 4z'}]]},
         'bm0': {type:'g',svg:[['path',{d:'M 0,0 H 2 V 20 h 8 V 0 h 3 V 20 h 6 V 0 h 4 V 20 h 17',class:'s16'}]]},
+        'cm0': {type:'g',svg:[['path',{d:'M 0,0 V 20 L 20,20',class:'s16'}]]},
         'ddd': {type:'g',svg:[['path',{d:'m0,20 20,0',class:'s2'}]]},
         'dm0': {type:'g',svg:[['path',{d:'m0,20 10,0',class:'s2'}],['path',{d:'m12,20 8,0',class:'s0'}]]},
         'dm1': {type:'g',svg:[['path',{d:'M0,20 3,20 9,0 20,0',class:'s0'}]]},
@@ -20694,6 +20718,7 @@ const lowkeySkin = {
         '0m1': {type:'g',svg:[['path',{d:'M0,20 3,20 9,0 20,0',class:'s0'}]]},
         '0ma': {type:'g',svg:[['path',{d:'M 0,20 H 10 L 16,0 h 4',class:'s16'}]]},
         '0mb': {type:'g',svg:[['path',{d:'M 0,20 H 2 V 0 h 8 v 20 h 3 V 0 h 6 v 20 h 4 V 0 h 17',class:'s16'}]]},
+        '0mc': {type:'g',svg:[['path',{d:'M 0,20 V 0 L 20,0',class:'s16'}]]},
         '0md': {type:'g',svg:[['path',{d:'m8,20 10,0',class:'s2'}],['path',{d:'m0,20 5,0',class:'s0'}]]},
         '0mu': {type:'g',svg:[['path',{d:'m0,20 3,0 C 7,10 10.107603,0 20,0',class:'s0'}]]},
         '0mv-2': {type:'g',svg:[['path',{d:'M9,0 20,0 20,20 3,20 z',class:'s6'}],['path',{d:'M3,20 9,0 20,0',class:'s0'}],['path',{d:'m0,20 20,0',class:'s0'}]]},
@@ -20728,6 +20753,7 @@ const lowkeySkin = {
         'arrowhead': {type:'marker',style:'fill:#0041c4',markerHeight:'7',markerWidth:'10',markerUnits:'strokeWidth',viewBox:'0 -4 11 8',refX:'15',refY:'0',orient:'auto',svg:[['path',{d:'M0 -4 11 0 0 4z'}]]},
         'arrowtail': {type:'marker',style:'fill:#0041c4',markerHeight:'7',markerWidth:'10',markerUnits:'strokeWidth',viewBox:'-11 -4 11 8',refX:'-15',refY:'0',orient:'auto',svg:[['path',{d:'M0 -4 -11 0 0 4z'}]]},
         'bm0': {type:'g',svg:[['path',{d:'M 0,0 H 2 V 20 h 8 V 0 h 3 V 20 h 6 V 0 h 4 V 20 h 17',class:'s16'}]]},
+        'cm0': {type:'g',svg:[['path',{d:'M 0,0 V 20 L 20,20',class:'s16'}]]},
         'ddd': {type:'g',svg:[['path',{d:'m0,20 20,0',class:'s2'}]]},
         'dm0': {type:'g',svg:[['path',{d:'m0,20 10,0',class:'s2'}],['path',{d:'m12,20 8,0',class:'s0'}]]},
         'dm1': {type:'g',svg:[['path',{d:'M0,20 3,20 9,0 20,0',class:'s0'}]]},
@@ -20958,6 +20984,7 @@ const narrowSkin = {
         '0m1': {type:'g',svg:[['path',{d:'M 0,20 1,20 7,0 10,0',class:'s0'}]]},
         '0ma': {type:'g',svg:[['path',{d:'M 0,20 H 10 L 16,0 h 4',class:'s14'}]]},
         '0mb': {type:'g',svg:[['path',{d:'M 0,20 H 2 V 0 h 8 v 20 h 3 V 0 h 6 v 20 h 4 V 0 h 17',class:'s14'}]]},
+        '0mc': {type:'g',svg:[['path',{d:'M 0,20 V 0 L 20,0',class:'s14'}]]},
         '0md': {type:'g',svg:[['path',{d:'m 1,20 9,0',class:'s2'}],['path',{d:'m 0,20 1,0',class:'s0'}]]},
         '0mu': {type:'g',svg:[['path',{d:'m 0,20 1,0 C 2,13 5,0 10,0',class:'s0'}]]},
         '0mv-2': {type:'g',svg:[['path',{d:'m 7,0 3,0 0,20 -9,0 z',class:'s6'}],['path',{d:'M 1,20 7,0 10,0',class:'s0'}],['path',{d:'m 0,20 10,0',class:'s0'}]]},
@@ -20991,6 +21018,7 @@ const narrowSkin = {
         'arrowhead': {type:'marker',style:'fill:#0041c4',markerHeight:'7',markerWidth:'10',markerUnits:'strokeWidth',viewBox:'0 -4 11 8',refX:'15',refY:'0',orient:'auto',svg:[['path',{d:'M0 -4 11 0 0 4z'}]]},
         'arrowtail': {type:'marker',style:'fill:#0041c4',markerHeight:'7',markerWidth:'10',markerUnits:'strokeWidth',viewBox:'-11 -4 11 8',refX:'-15',refY:'0',orient:'auto',svg:[['path',{d:'M0 -4 -11 0 0 4z'}]]},
         'bm0': {type:'g',svg:[['path',{d:'M 0,0 H 2 V 20 h 8 V 0 h 3 V 20 h 6 V 0 h 4 V 20 h 17',class:'s14'}]]},
+        'cm0': {type:'g',svg:[['path',{d:'M 0,0 V 20 L 20,20',class:'s14'}]]},
         'ddd': {type:'g',svg:[['path',{d:'m 0,20 10,0',class:'s2'}]]},
         'dm0': {type:'g',svg:[['path',{d:'m 0,20 7,0',class:'s2'}],['path',{d:'m 7,20 3,0',class:'s0'}]]},
         'dm1': {type:'g',svg:[['path',{d:'M 0,20 1,20 7,0 10,0',class:'s0'}]]},
