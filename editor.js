@@ -17,16 +17,18 @@
         return array;
     }
 
-    function delta (root, name) {
+    function delta(root, name) {
         if (root && root[name]) {
             var res = Number(root[name]);
-            if ((res !== 1) && (res !== -1)) { return 0; }
+            if ((res !== 1) && (res !== -1)) {
+                return 0;
+            }
             return res;
         }
         return 0;
     }
 
-    function ring (name, inc, size, init) {
+    function ring(name, inc, size, init) {
         var res;
         res = parseInt(localStorage [name]);
         if (res || res === 0) {
@@ -43,7 +45,7 @@
         return res;
     }
 
-    function setStyle (id, prop) {
+    function setStyle(id, prop) {
         var e = document.getElementById(id);
         e.removeAttribute('style');
         for (var p in prop) {
@@ -51,7 +53,20 @@
         }
     }
 
-    function editorState (op) {
+    function checkJson5(text) {
+        localStorage.editor = text;
+        try {
+            return JSON5.parse(text);
+        } catch {
+            // we don't care if text is not json
+        }
+    }
+
+    function refreshEditor() {
+        WaveDrom.renderWaveForm(checkJson5($("#InputJSON_0").val()), "WaveDrom_Display_0");
+    }
+
+    function editorState(op) {
         var drot = delta(op, 'rot');
         var dper = delta(op, 'per');
         var rot = ring('drom.editor.rot', drot, 4, 0);
@@ -75,21 +90,33 @@
         }
         setStyle('SVG', styleSVG);
         setStyle('TXT', styleTXT);
-        WaveDrom.EditorRefresh();
+        refreshEditor();
     }
 
-    function editorInit () {
+    function editorInit() {
         if (document.location.search) {
             WaveDrom.cm.setValue(decodeURIComponent(window.location.search.substr(1)));
             // document.getElementById ('InputJSON_0').value = decodeURIComponent(window.location.search.substr(1));
         }
-        window.ondragover = function(e) { e.preventDefault(); return false; };
-        window.ondrop = function(e) { e.preventDefault(); return false; };
+        window.ondragover = function (e) {
+            e.preventDefault();
+            return false;
+        };
+        window.ondrop = function (e) {
+            e.preventDefault();
+            return false;
+        };
 
         if (typeof process === 'object') { // nodewebkit detection
             var holder = document.getElementById('content');
-            holder.ondragover = function () { this.className = 'hover'; return false; };
-            holder.ondragend = function () { this.className = ''; return false; };
+            holder.ondragover = function () {
+                this.className = 'hover';
+                return false;
+            };
+            holder.ondragend = function () {
+                this.className = '';
+                return false;
+            };
             holder.ondrop = function (e) {
                 e.preventDefault();
 
@@ -102,11 +129,11 @@
         editorState();
     }
 
-    function setFullURL () {
+    function setFullURL() {
         document.location.search = encodeURIComponent(document.getElementById('InputJSON_0').value);
     }
 
-    function menuOpen (e) {
+    function menuOpen(e) {
         function closestById(el, id) {
             while (el.id !== id) {
                 el = el.parentNode;
@@ -125,24 +152,26 @@
         }
     }
 
-    function gotoWaveDromHome () {
+    function gotoWaveDromHome() {
         window.open('http://wavedrom.com').focus();
     }
 
-    function gotoWaveDromGuide () {
+    function gotoWaveDromGuide() {
         window.open('tutorial.html').focus();
     }
 
-    function loadJSON () {
+    function loadJSON() {
 
         function chooseFile(name) {
             var chooser = document.querySelector(name);
 
-            chooser.addEventListener('change', function() {
+            chooser.addEventListener('change', function () {
                 var fs = require('fs');
                 var filename = chooser.value;
-                if (!filename) { return; }
-                fs.readFile(filename, 'utf-8', function(err, data) {
+                if (!filename) {
+                    return;
+                }
+                fs.readFile(filename, 'utf-8', function (err, data) {
                     if (err) {
                         console.log('error');
                     }
@@ -172,21 +201,23 @@
         }
     }
 
-    function saveJSON () {
+    function saveJSON() {
         var a;
 
-        function sjson () {
+        function sjson() {
             return localStorage.waveform;
         }
 
         function chooseFile(name) {
             var chooser = document.querySelector(name);
 
-            chooser.addEventListener('change', function() {
+            chooser.addEventListener('change', function () {
                 var fs = require('fs');
                 var filename = this.value;
-                if (!filename) { return; }
-                fs.writeFile(filename, sjson(), function(err) {
+                if (!filename) {
+                    return;
+                }
+                fs.writeFile(filename, sjson(), function (err) {
                     if (err) {
                         console.log('error');
                     }
@@ -229,7 +260,7 @@
         }
     }
 
-    function ssvg () {
+    function ssvg() {
         var svg, ser;
 
         svg = document.getElementsByTagName('svg')[0]; // document.getElementById('svgcontent_0');
@@ -240,18 +271,20 @@
             + ser.serializeToString(svg);
     }
 
-    function saveSVG () {
+    function saveSVG() {
         var a;
 
         function chooseFile(name) {
             var chooser = document.querySelector(name);
 
-            chooser.addEventListener('change', function() {
+            chooser.addEventListener('change', function () {
                 var fs = require('fs');
                 var filename = this.value;
-                if (!filename) { return; }
-                fs.writeFile(filename, ssvg(), function(err) {
-                    if(err) {
+                if (!filename) {
+                    return;
+                }
+                fs.writeFile(filename, ssvg(), function (err) {
+                    if (err) {
                         console.log('error');
                     }
                 });
@@ -292,12 +325,12 @@
         }
     }
 
-    function pngdata (done) {
+    function pngdata(done) {
 
         var img = new Image();
         var canvas = document.createElement('canvas');
 
-        function onload () {
+        function onload() {
             canvas.width = img.width;
             canvas.height = img.height;
             var context = canvas.getContext('2d');
@@ -317,20 +350,22 @@
         }
     }
 
-    function savePNG () {
+    function savePNG() {
         var a;
 
         function chooseFile(name) {
             var chooser = document.querySelector(name);
 
-            chooser.addEventListener('change', function() {
+            chooser.addEventListener('change', function () {
                 var fs = require('fs');
                 var filename = this.value;
-                if (!filename) { return; }
+                if (!filename) {
+                    return;
+                }
                 pngdata(function (data) {
                     data = data.replace(/^data:image\/\w+;base64,/, '');
                     var buf = new Buffer(data, 'base64');
-                    fs.writeFile(filename, buf, function(err) {
+                    fs.writeFile(filename, buf, function (err) {
                         if (err) {
                             console.log('error');
                         }
@@ -378,6 +413,7 @@
         }
     }
 
+    WaveDrom.refreshEditor = refreshEditor;
     WaveDrom.editorInit = editorInit;
     WaveDrom.menuOpen = menuOpen;
     WaveDrom.loadJSON = loadJSON;

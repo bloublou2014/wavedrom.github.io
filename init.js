@@ -74,7 +74,7 @@
 
         if (args[2] && args[3]) {
             e.value = val;
-            WaveDrom.EditorRefresh();
+            WaveDrom.refreshEditor();
 
             if (args[2] === 'svg') {
                 data = ssvg();
@@ -124,7 +124,7 @@
                 left: scroller.scrollLeft,
                 top: scroller.scrollTop
             };
-            WaveDrom.EditorRefresh();
+            WaveDrom.refreshEditor();
             scroller.scrollTop = state.top;
             scroller.scrollLeft = state.left;
             localStorage.waveform = v;
